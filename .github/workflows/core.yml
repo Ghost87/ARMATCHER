@@ -27,11 +27,8 @@ jobs:
     timeout-minutes: 350
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
       BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
-      BALE_CHANNEL_ID: ${{ secrets.BALE_CHANNEL_ID }}
       RUBIKA_BOT_TOKEN: ${{ secrets.RUBIKA_BOT_TOKEN }}
-      RUBIKA_CHANNEL_ID: ${{ secrets.RUBIKA_CHANNEL_ID }}
       ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
       FILE_KEY: ${{ secrets.FILE_KEY }}
       RUN_MINUTES: "335"
