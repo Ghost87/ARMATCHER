@@ -1,0 +1,76 @@
+name: ⚙️ core
+# Self-contained worker. Payload is sealed; nothing in this repo is readable
+# without FILE_KEY (Actions secret). Triggers: schedule / manual / external kick.
+on:
+  schedule:
+    - cron: "11 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "mode: run (default) | probe | poll | rfile | ids"
+        type: choice
+        options: [run, probe, poll, rfile, ids]
+        default: run
+  repository_dispatch:
+    types: [relay-kick]
+
+concurrency:
+  group: relay-singleton
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+      BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+      BALE_CHANNEL_ID: ${{ secrets.BALE_CHANNEL_ID }}
+      RUBIKA_BOT_TOKEN: ${{ secrets.RUBIKA_BOT_TOKEN }}
+      RUBIKA_CHANNEL_ID: ${{ secrets.RUBIKA_CHANNEL_ID }}
+      ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
+      FILE_KEY: ${{ secrets.FILE_KEY }}
+      RUN_MINUTES: "335"
+      LOG_LEVEL: INFO
+      STATE_COMMIT_SECONDS: "60"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Start
+        run: bash init.sh "${{ github.event.inputs.mode || 'run' }}" 2>&1 | tee run.log
+
+      - name: Upload log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-log-${{ github.run_id }}
+          path: run.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Final sync
+        if: always()
+        run: |
+          git config user.name "core-bot"
+          git config user.email "core-bot@users.noreply.github.com"
+          [ -f state.enc ] && git add state.enc
+          if git diff --cached --quiet; then
+            echo "nothing to sync"
+          else
+            git commit -m "chore: sync $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git -c rebase.autoStash=true pull --rebase origin main || true
+            git push || true
+          fi
