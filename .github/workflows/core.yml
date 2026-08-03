@@ -11,12 +11,18 @@ on:
         type: choice
         options: [run, probe, poll, rfile, ids]
         default: run
+      minutes:
+        description: "run minutes (empty = 335; مثلاً 10 برای تست سریع)"
+        type: string
+        default: ""
+        required: false
   repository_dispatch:
     types: [relay-kick]
 
 concurrency:
   group: relay-singleton
-  cancel-in-progress: false
+  # manual re-run (or kick) REPLACES the in-flight run — no more waiting/queue jams
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -31,7 +37,7 @@ jobs:
       RUBIKA_BOT_TOKEN: ${{ secrets.RUBIKA_BOT_TOKEN }}
       ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
       FILE_KEY: ${{ secrets.FILE_KEY }}
-      RUN_MINUTES: "335"
+      RUN_MINUTES: ${{ github.event.inputs.minutes || '335' }}
       LOG_LEVEL: INFO
       STATE_COMMIT_SECONDS: "60"
     steps:
