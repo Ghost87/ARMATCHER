@@ -1,6 +1,11 @@
 name: ⚙️ core
 # Self-contained worker. Payload is sealed; nothing in this repo is readable
 # without FILE_KEY (Actions secret). Triggers: schedule / manual / external kick.
+#
+# 🛑 PANIC SWITCH — create a file named STOP at the repo root (web UI: Add file
+#    → Create new file → name it STOP → Commit). Every running and future run
+#    halts within ~60 seconds. Delete STOP to resume. Three independent layers
+#    enforce it: this YAML's gate, the watchtower (watchdog.sh), the sealer.
 on:
   schedule:
     - cron: "11 */6 * * *"
@@ -18,19 +23,25 @@ on:
         required: false
   repository_dispatch:
     types: [relay-kick]
+  push:
+    # 🟢 GO kick: any commit touching the file named GO starts the worker NOW
+    # (web file edit is enough — no Actions UI buttons needed). paths-filtered,
+    # so state-sync commits never trigger it. STOP file keeps absolute priority.
+    paths: [GO]
 
 concurrency:
   group: relay-singleton
-  # manual re-run (or kick) REPLACES the in-flight run — no more waiting/queue jams
+  # a new run REPLACES the in-flight run — no queues, no jams
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: write   # state-sync commits
+  actions: write    # watchtower self-cancel
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 350   # hard ceiling — no run can ever outlive this
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
@@ -52,7 +63,22 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
+      - name: Arm watchtower
+        env:
+          CANCEL_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x watchdog.sh
+          nohup bash watchdog.sh > watchtower.log 2>&1 &
+          echo "watchtower armed (pid $!)"
+
+      - name: STOP gate
+        run: |
+          if [ -f STOP ]; then
+            echo "::warning::⛔ STOP flag present — this run is a deliberate no-op. Delete STOP to resume."
+          fi
+
       - name: Start
+        if: ${{ ! hashFiles('STOP') }}
         run: bash init.sh "${{ github.event.inputs.mode || 'run' }}" 2>&1 | tee run.log
 
       - name: Upload log artifact
@@ -60,7 +86,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: run-log-${{ github.run_id }}
-          path: run.log
+          path: |
+            run.log
+            watchtower.log
           retention-days: 7
           if-no-files-found: ignore
 
