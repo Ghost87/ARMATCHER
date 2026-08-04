@@ -4,6 +4,13 @@
 set -euo pipefail
 MODE="${1:-run}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+# 🛑 web kill-switch: a file named STOP in the repo = instant no-op for every run
+if [ -f "$ROOT/STOP" ]; then
+  echo "⛔ STOP flag found in repo — worker stays down."
+  exit 0
+fi
+
 WORK="$ROOT/.runit"
 : "${FILE_KEY:?FILE_KEY env is missing}"
 
