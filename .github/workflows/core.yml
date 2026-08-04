@@ -1,11 +1,12 @@
 name: ⚙️ core
 # Self-contained worker. Payload is sealed; nothing in this repo is readable
-# without FILE_KEY (Actions secret). Triggers: schedule / manual / external kick.
+# without FILE_KEY (Actions secret). Triggers: schedule / manual / kick / GO.
 #
-# 🛑 PANIC SWITCH — create a file named STOP at the repo root (web UI: Add file
-#    → Create new file → name it STOP → Commit). Every running and future run
-#    halts within ~60 seconds. Delete STOP to resume. Three independent layers
-#    enforce it: this YAML's gate, the watchtower (watchdog.sh), the sealer.
+# 🛑 STOP file at repo root (web: Add file → STOP → Commit) = every run halts:
+#    entry gate below blocks new runs; the in-run sealer kills a live worker
+#    within ~60s. Delete STOP to resume.
+# 🟢 GO file (edit it and Commit) = worker starts instantly. paths-filtered, so
+#    state-sync commits never trigger it.
 on:
   schedule:
     - cron: "11 */6 * * *"
@@ -24,9 +25,6 @@ on:
   repository_dispatch:
     types: [relay-kick]
   push:
-    # 🟢 GO kick: any commit touching the file named GO starts the worker NOW
-    # (web file edit is enough — no Actions UI buttons needed). paths-filtered,
-    # so state-sync commits never trigger it. STOP file keeps absolute priority.
     paths: [GO]
 
 concurrency:
@@ -36,7 +34,6 @@ concurrency:
 
 permissions:
   contents: write   # state-sync commits
-  actions: write    # watchtower self-cancel
 
 jobs:
   run:
@@ -63,18 +60,10 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Arm watchtower
-        env:
-          CANCEL_TOKEN: ${{ github.token }}
-        run: |
-          chmod +x watchdog.sh
-          nohup bash watchdog.sh > watchtower.log 2>&1 &
-          echo "watchtower armed (pid $!)"
-
       - name: STOP gate
         run: |
           if [ -f STOP ]; then
-            echo "::warning::⛔ STOP flag present — this run is a deliberate no-op. Delete STOP to resume."
+            echo "::warning::⛔ STOP flag present — deliberate no-op. Delete STOP to resume."
           fi
 
       - name: Start
@@ -86,9 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: run-log-${{ github.run_id }}
-          path: |
-            run.log
-            watchtower.log
+          path: run.log
           retention-days: 7
           if-no-files-found: ignore
 
