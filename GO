@@ -1,1 +1,1 @@
-🟢 GO — boot v5.2 Speed Deep retry
+🟢 GO — boot v5.2.1 hotfix (18:59)
