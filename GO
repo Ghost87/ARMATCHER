@@ -1,1 +1,2 @@
 🟢 GO — boot v5.4 bridge-ready (15:44)
+2026-10-16T16:12:52Z 🔓 flip v5.4.1 — sealed bridge creds live; true 50MB era begins
