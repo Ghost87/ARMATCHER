@@ -33,6 +33,13 @@ git -C "$ROOT" config user.email "core-bot@users.noreply.github.com" 2>/dev/null
 # 🌉 v5.4 local Bot API bridge (activation: TG_LOCAL_API=1 + TELEGRAM_API_ID/HASH).
 # Runs the official telegram-bot-api daemon beside the worker; downloads become
 # local disk reads and the hard 20MB cloud wall lifts to the destinations' 50MB.
+# v5.4.1: sealed creds (payload/tgapp.env) auto-activate the bridge when the workflow
+# left TG_LOCAL_API unset entirely; an explicit 1/0 from the env always wins.
+if [ -z "${TG_LOCAL_API+x}" ] && [ -f "$WORK/tgapp.env" ]; then
+  echo "🌉 sealed bridge creds found — auto-activating local Bot API bridge"
+  set -a; . "$WORK/tgapp.env"; set +a
+  export TG_LOCAL_API=1
+fi
 if [ "${TG_LOCAL_API:-0}" = "1" ]; then
   echo "🌉 TG_LOCAL_API=1 — starting local Bot API bridge…"
   : "${TELEGRAM_API_ID:?TELEGRAM_API_ID missing (from my.telegram.org)}"
