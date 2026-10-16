@@ -30,6 +30,35 @@ export REPO_ROOT="$ROOT"
 git -C "$ROOT" config user.name "core-bot" 2>/dev/null || true
 git -C "$ROOT" config user.email "core-bot@users.noreply.github.com" 2>/dev/null || true
 
+# 🌉 v5.4 local Bot API bridge (activation: TG_LOCAL_API=1 + TELEGRAM_API_ID/HASH).
+# Runs the official telegram-bot-api daemon beside the worker; downloads become
+# local disk reads and the hard 20MB cloud wall lifts to the destinations' 50MB.
+if [ "${TG_LOCAL_API:-0}" = "1" ]; then
+  echo "🌉 TG_LOCAL_API=1 — starting local Bot API bridge…"
+  : "${TELEGRAM_API_ID:?TELEGRAM_API_ID missing (from my.telegram.org)}"
+  : "${TELEGRAM_API_HASH:?TELEGRAM_API_HASH missing}"
+  mkdir -p "$WORK/tgbapi"
+  docker rm -f tgbapi >/dev/null 2>&1 || true
+  docker run -d --name tgbapi --restart no \
+    -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
+    -v "$WORK/tgbapi:/var/lib/telegram-bot-api" \
+    -p 127.0.0.1:8081:8081 \
+    aiogram/telegram-bot-api:latest --local
+  ok=""
+  for i in $(seq 1 45); do
+    curl -sf -o /dev/null "http://127.0.0.1:8081/" 2>/dev/null && { ok=1; break; } || sleep 1
+  done
+  if [ -n "$ok" ]; then
+    export TG_API_BASE="${TG_API_BASE:-http://127.0.0.1:8081}"
+    export TG_LOCAL_DIR="$WORK/tgbapi"
+    echo "🌉 bridge healthy at ${TG_API_BASE}"
+  else
+    # Bridge failed to come up — stay on the cloud path (service never goes dark).
+    export TG_LOCAL_API=0
+    echo "🌉⚠️ bridge failed to start — staying on cloud API (20MB ceiling)"
+  fi
+fi
+
 case "$MODE" in
   probe)
     set +e
