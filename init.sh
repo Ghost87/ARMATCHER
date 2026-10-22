@@ -51,18 +51,29 @@ if [ "${TG_LOCAL_API:-0}" = "1" ]; then
     -v "$WORK/tgbapi:/var/lib/telegram-bot-api" \
     -p 127.0.0.1:8081:8081 \
     aiogram/telegram-bot-api:latest --local
-  ok=""
-  for i in $(seq 1 45); do
-    curl -sf -o /dev/null "http://127.0.0.1:8081/" 2>/dev/null && { ok=1; break; } || sleep 1
-  done
-  if [ -n "$ok" ]; then
-    export TG_API_BASE="${TG_API_BASE:-http://127.0.0.1:8081}"
-    export TG_LOCAL_DIR="$WORK/tgbapi"
-    echo "🌉 bridge healthy at ${TG_API_BASE}"
-  else
-    # Bridge failed to come up — stay on the cloud path (service never goes dark).
+  if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+    echo "🌉⚠️ no bot token for the bridge probe — staying on cloud API (20MB ceiling)"
     export TG_LOCAL_API=0
-    echo "🌉⚠️ bridge failed to start — staying on cloud API (20MB ceiling)"
+  else
+    ok=""
+    # v5.4.2: a HEALTHY daemon answers 404 on / — probing the root was the v5.4.1 bug.
+    # The only honest gate: the bridge itself answering the bot's own getMe
+    # (this also proves the token migrated cloud→local).
+    for i in $(seq 1 60); do
+      body="$(curl -s --max-time 4 "http://127.0.0.1:8081/bot${TELEGRAM_BOT_TOKEN}/getMe" 2>/dev/null || true)"
+      case "$body" in *'"ok":true'*) ok=1; break;; esac
+      sleep 1
+    done
+    if [ -n "$ok" ]; then
+      export TG_API_BASE="${TG_API_BASE:-http://127.0.0.1:8081}"
+      export TG_LOCAL_DIR="$WORK/tgbapi"
+      echo "🌉 bridge healthy at ${TG_API_BASE} (getMe verified — 50MB lane open)"
+    else
+      docker logs --tail 5 tgbapi 2>/dev/null || true
+      # Bridge failed to come up — stay on the cloud path (service never goes dark).
+      export TG_LOCAL_API=0
+      echo "🌉⚠️ bridge failed to start — staying on cloud API (20MB ceiling)"
+    fi
   fi
 fi
 
