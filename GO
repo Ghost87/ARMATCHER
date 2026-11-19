@@ -1,1 +1,1 @@
-GO v5.5.1 — 2026-11-19T12:17:22Z — BOOT REQUEST (cron late; wedged v5.5 run must be replaced)
+go v5.5.1 1795093725
