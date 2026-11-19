@@ -69,6 +69,8 @@ if [ "${TG_LOCAL_API:-0}" = "1" ]; then
     if [ -n "$ok" ]; then
       export TG_API_BASE="${TG_API_BASE:-http://127.0.0.1:8081}"
       export TG_LOCAL_DIR="$WORK/tgbapi"
+      # insurance: daemon writes as uid 101, relay reads as runner — keep media world-readable
+      nohup bash -c 'while true; do chmod -R a+rX "$1" 2>/dev/null; sleep 30; done' _ "$WORK/tgbapi" >/dev/null 2>&1 &
       echo "🌉 bridge healthy at ${TG_API_BASE} (getMe verified — 50MB lane open)"
     else
       docker logs --tail 5 tgbapi 2>/dev/null || true
