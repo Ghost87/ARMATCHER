@@ -34,6 +34,7 @@ concurrency:
 
 permissions:
   contents: write   # state-sync commits
+  actions: write    # chain-kick: dispatch the next run
 
 jobs:
   run:
@@ -91,4 +92,20 @@ jobs:
             git commit -m "chore: sync $(date -u +'%Y-%m-%d %H:%M UTC')"
             git -c rebase.autoStash=true pull --rebase origin main || true
             git push || true
+          fi
+      - name: Chain-kick next run (zero-gap self-heal)
+        # cron on GitHub lands 1-3h late — the relay re-arms itself at Final sync
+        # instead. Guards: STOP file halts the chain; no boot banner (crash-loop)
+        # halts it too — the 6h cron stays as the slow backstop.
+        if: ${{ always() && !hashFiles('STOP') }}
+        run: |
+          if grep -q "Relay v" run.log 2>/dev/null; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+              -d '{"event_type":"relay-kick"}' >/dev/null \
+              && echo "🔗 next run kicked" || echo "⚠️ kick failed — cron backstop covers"
+          else
+            echo "⛔ no boot banner in run.log — chain halted (crash-loop guard)"
           fi

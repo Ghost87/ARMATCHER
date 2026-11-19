@@ -48,6 +48,8 @@ if [ "${TG_LOCAL_API:-0}" = "1" ]; then
   docker rm -f tgbapi >/dev/null 2>&1 || true
   docker run -d --name tgbapi --restart no \
     -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
+    -e TELEGRAM_LOCAL=1 \
+    -e TELEGRAM_WORK_DIR=/var/lib/telegram-bot-api \
     -v "$WORK/tgbapi:/var/lib/telegram-bot-api" \
     -p 127.0.0.1:8081:8081 \
     aiogram/telegram-bot-api:latest --local
