@@ -1,3 +1,4 @@
 🟢 GO — boot v5.4 bridge-ready (15:44)
 2026-10-16T16:12:52Z 🔓 flip v5.4.1 — sealed bridge creds live; true 50MB era begins
 2026-10-22T07:08:55Z 🔧 v5.4.2 — health gate asks getMe; 50MB lane re-armed
+2026-11-19T09:26:17Z 🔧 GO v5.5 — media surgery: true-local + shrink + breaker + chain-kick
