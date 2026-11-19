@@ -1,1 +1,1 @@
-GO v5.5.1 — 2026-11-19T11:07:30Z — FORCE BOOT: photos are DOWN in prod, the frozen-offset run must be replaced NOW
+GO v5.5.1 — 2026-11-19T12:17:22Z — BOOT REQUEST (cron late; wedged v5.5 run must be replaced)
