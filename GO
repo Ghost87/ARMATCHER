@@ -1,1 +1,1 @@
-GO v5.5.1 — 2026-11-19T10:49:58Z — poke: boot the fixed worker NOW
+GO v5.5.1 — 2026-11-19T11:07:30Z — FORCE BOOT: photos are DOWN in prod, the frozen-offset run must be replaced NOW
