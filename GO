@@ -1,1 +1,1 @@
-GO v5.5.1 — 2026-11-19T10:26:39Z — disk-first bridge files, boot file-probe, logOut degrade, diag heartbeat
+GO v5.5.1 — 2026-11-19T10:49:58Z — poke: boot the fixed worker NOW
