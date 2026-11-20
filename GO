@@ -1,1 +1,1 @@
-GO v5.5.2 — 2026-11-20T04:37:04Z — probe tolerance + ffmpeg insurance
+GO v5.6 — 2026-11-20T08:15:36Z — pure-cloud rollback boot
