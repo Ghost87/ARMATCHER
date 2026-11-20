@@ -71,6 +71,8 @@ if [ "${TG_LOCAL_API:-0}" = "1" ]; then
       export TG_LOCAL_DIR="$WORK/tgbapi"
       # insurance: daemon writes as uid 101, relay reads as runner — keep media world-readable
       nohup bash -c 'while true; do chmod -R a+rX "$1" 2>/dev/null; sleep 30; done' _ "$WORK/tgbapi" >/dev/null 2>&1 &
+      # insurance: shrink-to-fit needs ffmpeg; some runner images lack it
+      command -v ffmpeg >/dev/null 2>&1 || { echo "🗜 ffmpeg missing — installing"; sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg || echo "⚠️ ffmpeg install failed — shrink disabled"; }
       echo "🌉 bridge healthy at ${TG_API_BASE} (getMe verified — 50MB lane open)"
     else
       docker logs --tail 5 tgbapi 2>/dev/null || true
