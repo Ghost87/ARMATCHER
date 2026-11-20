@@ -1,1 +1,1 @@
-go v5.5.1 1795148665 probe
+GO v5.5.1 — 2026-11-20T04:28:06Z — workflow repaired (dup YAML keys removed), boot now
